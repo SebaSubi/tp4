@@ -1,113 +1,102 @@
-import Image from "next/image";
+"use client"
+import { Suspense, useEffect, useState } from "react";
+import { deleteNumber, getAllNumbers, postNumber, putNumber } from "./server/counter";
+import Counter from "./components/Counter";
+
+const bgColors = [
+  'bg-red-500',
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-yellow-500',
+  'bg-purple-500'
+]; //We define an array of colour for the menu, so the user can select which colour they want their counter to be. You can add more if you wish
 
 export default function Home() {
+  const [counterArray, setCounterArray] = useState<any[]>([]) //This useState updates the array with all the created counters, 
+  const [colorMenu, setColorMenu] = useState(false) //useState used to make the color menu appear or disappear
+  const [maxCounters, setMaxCounter] = useState(false) //This is to see if we hace reached the max counters, which is 10
+
+  useEffect(() => {
+    const fetchNumber = async () => {
+      const array = await getAllNumbers(); //Get the array of already created counters
+      setCounterArray(array) //We initialize the value of counterArray with any counters that have already been created
+      
+    };
+    fetchNumber(); //Call the function
+  }, []);
+
+  useEffect(() => {
+    // This effect will run whenever counterArray changes to meake sure the limit of 10 hastn been reached
+    if (counterArray.length >= 10) { 
+      setMaxCounter(true);
+    }
+  }, [counterArray]);  
+
+  async function addCounter(colour: string) { //This is the function that is called when the user adds a counter and selects a colour
+    const id = await postNumber(0, colour); //We post in the DB the new counter with the initial value of 0, and the colour selected by the user
+    setCounterArray(prevCounterArray => [...prevCounterArray, id]) //Properly update the counterArray with the new value that has just been added
+    if(counterArray.length >= 9) {
+      setMaxCounter(true)
+    } 
+  }
+
+  async function deleteCounter(id: string) {
+    deleteNumber(id) // Delete the number from the db
+    setCounterArray(prevCounterArray => prevCounterArray.filter(counter => counter._id !== id)); //Delete the number from the array
+    setMaxCounter(false)
+  }
+
+
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main className="flex flex-col items-center justify-center min-h-screen">
+    {counterArray.length ? ( //We make sure the counterArray isnt empty
+        <div className="flex flex-col items-center justify-center bg-black rounded-sm">
+          {counterArray.map((counter, index) => (
+            <i key={index} onClick={() => { 
+              if(maxCounters) {
+                deleteCounter(counter._id)
+              }
+            }}>
+              <Counter id={counter._id} key={index} colour={counter.colour} /> {/* For each of the counters inside the array, we create a component Counter with the id of the counter, and the color selected by the user*/}
+            </i>
+          ))}
         </div>
+    ) : null}
+    {maxCounters?
+      <>
+        <p className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Max counters reached, click on the counter you wish to remove</p>
+        {/* <button className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 focus:outline-none" onClick={() => {setColorMenu(!colorMenu)}}>
+          Remove Counter
+        </button>  */}
+      </>
+      :
+      <button className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 focus:outline-none" onClick={() => {setColorMenu(!colorMenu)}}>
+        Add Counter
+      </button> 
+    }
+    
+    {colorMenu? // Verifies if the user clicked the Add Counter
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center h-1/6 w-40 bg-white rounded-md shadow-lg">
+      <h2 className="text-black text-xl font-semibold mb-4">Which color would you like?</h2>
+      <div className="flex flex-wrap justify-center w-full">
+        {bgColors.map((colour, index) => ( // List all the colours inside the array, and create a button with each
+          <button
+            className={`p-2 w-8 h-8 rounded-full ${colour}`}
+            onClick={() => {
+              addCounter(colour) // When the user clicks, a new counter is created with the color selected 
+              setColorMenu(false)
+            }}
+            key={index}
+            title={colour.replace('bg-', '')} // Decoration to make it look better
+          />
+        ))}
       </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
+    : 
+    null}
+  </main>
   );
 }
+
+
