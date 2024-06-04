@@ -3,7 +3,7 @@
 
 export async function getAllNumbers() {
   try {
-    const res = await fetch(`http://localhost:3000/api/numbers`, { cache: 'no-store' }) //Fetches the information, and sets the cache to no-store*
+    const res = await fetch(`/api/numbers`, { cache: 'no-store' }) //Fetches the information, and sets the cache to no-store*
     if(!res.ok) {
       throw new Error("failed to fetch data")
     } 
@@ -17,7 +17,7 @@ export async function getAllNumbers() {
 
 export async function getNumberById(id: string) {
   try {
-    const res = await fetch(`http://localhost:3000/api/numbers/${id}`, { cache: 'no-store' }) 
+    const res = await fetch(`/api/numbers/${id}`, { cache: 'no-store' }) 
     if(!res.ok) {
       throw new Error("failed to fetch data")
     } 
@@ -42,7 +42,7 @@ export async function putNumber(number: number, id: string) {
 
 export async function postNumber(number: number, colour: string) {
   try {
-    const res = await fetch("http://localhost:3000/api/numbers", {
+    const res = await fetch("/api/numbers", {
       method: "POST",
       headers: {
         "Content-type": "application/json",
@@ -60,7 +60,7 @@ export async function postNumber(number: number, colour: string) {
 
 export async function deleteNumber(id: string) {
   try {
-    await fetch(`http://localhost:3000/api/numbers?id=${id}`,
+    await fetch(`/api/numbers?id=${id}`,
       {
         method: "DELETE"
       }
